@@ -1,0 +1,73 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  ANALYST
+}
+
+enum WorkspacePlan {
+  FREE
+  PRO
+  SCALE
+}
+
+enum UsageMetric {
+  TOKENS
+  DOCUMENTS
+  WORKFLOW_RUNS
+}
+
+model User {
+  id               String       @id @default(cuid())
+  email            String       @unique
+  fullName         String
+  passwordHash     String?
+  refreshTokenHash String?
+  emailVerified    Boolean      @default(false)
+  memberships      Membership[]
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+}
+
+model Workspace {
+  id          String        @id @default(cuid())
+  name        String
+  slug        String        @unique
+  plan        WorkspacePlan @default(FREE)
+  memberships Membership[]
+  usageEvents UsageEvent[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model Membership {
+  id          String        @id @default(cuid())
+  userId      String
+  workspaceId String
+  role        WorkspaceRole @default(MEMBER)
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace   Workspace     @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+}
+
+model UsageEvent {
+  id          String      @id @default(cuid())
+  workspaceId String
+  metric      UsageMetric
+  quantity    Int
+  metadata    Json?
+  workspace   Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  createdAt   DateTime    @default(now())
+
+  @@index([workspaceId, metric, createdAt])
+}
