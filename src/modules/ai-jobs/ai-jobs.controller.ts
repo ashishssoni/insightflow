@@ -23,4 +23,24 @@ export class AiJobsController {
   list(@CurrentUser() user: { sub: string }, @Param('workspaceId') workspaceId: string) {
     return this.aiJobsService.list(user.sub, workspaceId);
   }
+
+  @Get(':workspaceId/runs/:workflowRunId')
+  @ApiOperation({ summary: 'Get workflow run details, output, and execution logs' })
+  detail(
+    @CurrentUser() user: { sub: string },
+    @Param('workspaceId') workspaceId: string,
+    @Param('workflowRunId') workflowRunId: string,
+  ) {
+    return this.aiJobsService.detail(user.sub, workspaceId, workflowRunId);
+  }
+
+  @Post(':workspaceId/runs/:workflowRunId/retry')
+  @ApiOperation({ summary: 'Retry a failed AI workflow run' })
+  retry(
+    @CurrentUser() user: { sub: string },
+    @Param('workspaceId') workspaceId: string,
+    @Param('workflowRunId') workflowRunId: string,
+  ) {
+    return this.aiJobsService.retry(user.sub, workspaceId, workflowRunId);
+  }
 }

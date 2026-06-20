@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable } from '@nestjs/common';
-import { UsageMetric } from '@prisma/client';
+import { UsageMetric, WorkspacePlan } from '@prisma/client';
 import { PrismaService } from '../../common/prisma.service';
 
 @Injectable()
@@ -14,11 +14,18 @@ export class UsageService {
 
     if (!membership) throw new ForbiddenException('You do not belong to this workspace');
 
-    const events = await this.prisma.usageEvent.findMany({
-      where: { workspaceId },
-      orderBy: { createdAt: 'desc' },
-      take: 50,
-    });
+    const [events, groupedTotals] = await Promise.all([
+      this.prisma.usageEvent.findMany({
+        where: { workspaceId },
+        orderBy: { createdAt: 'desc' },
+        take: 50,
+      }),
+      this.prisma.usageEvent.groupBy({
+        by: ['metric'],
+        where: { workspaceId },
+        _sum: { quantity: true },
+      }),
+    ]);
 
     const totals = {
       tokens: 0,
@@ -26,11 +33,20 @@ export class UsageService {
       workflowRuns: 0,
     };
 
-    for (const event of events) {
-      if (event.metric === UsageMetric.TOKENS) totals.tokens += event.quantity;
-      if (event.metric === UsageMetric.DOCUMENTS) totals.documents += event.quantity;
-      if (event.metric === UsageMetric.WORKFLOW_RUNS) totals.workflowRuns += event.quantity;
+    for (const item of groupedTotals) {
+      const quantity = item._sum.quantity ?? 0;
+      if (item.metric === UsageMetric.TOKENS) totals.tokens = quantity;
+      if (item.metric === UsageMetric.DOCUMENTS) totals.documents = quantity;
+      if (item.metric === UsageMetric.WORKFLOW_RUNS) totals.workflowRuns = quantity;
     }
+
+    const softLimitsByPlan: Record<WorkspacePlan, typeof totals> = {
+      FREE: { tokens: 10000, documents: 100, workflowRuns: 25 },
+      PRO: { tokens: 50000, documents: 500, workflowRuns: 200 },
+      SCALE: { tokens: 250000, documents: 5000, workflowRuns: 1500 },
+    };
+
+    const softLimits = softLimitsByPlan[membership.workspace.plan];
 
     return {
       workspace: {
@@ -40,10 +56,11 @@ export class UsageService {
       },
       totals,
       recentEvents: events,
-      softLimits: {
-        tokens: membership.workspace.plan === 'SCALE' ? 250000 : 50000,
-        documents: membership.workspace.plan === 'SCALE' ? 5000 : 500,
-        workflowRuns: membership.workspace.plan === 'SCALE' ? 1500 : 200,
+      softLimits,
+      remaining: {
+        tokens: Math.max(softLimits.tokens - totals.tokens, 0),
+        documents: Math.max(softLimits.documents - totals.documents, 0),
+        workflowRuns: Math.max(softLimits.workflowRuns - totals.workflowRuns, 0),
       },
     };
   }

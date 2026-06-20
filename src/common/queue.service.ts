@@ -10,6 +10,11 @@ export class QueueService {
 
   async enqueueDocumentJob(name: string, payload: Record<string, unknown>) {
     const job = await this.jobsQueue.add(name, payload, {
+      attempts: 3,
+      backoff: {
+        type: 'exponential',
+        delay: 1000,
+      },
       removeOnComplete: true,
       removeOnFail: 50,
     });
