@@ -38,9 +38,9 @@ This backend intentionally uses **2 databases** to model a more realistic AI Saa
 ```text
 PostgreSQL
 ├── Users
-├── Organizations / Workspaces
-├── Billing-ready usage records
-└── Usage Events
+├── Organizations
+├── Billing
+└── Usage
 
 MongoDB
 ├── Workflow Runs

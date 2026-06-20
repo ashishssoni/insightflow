@@ -9,9 +9,9 @@ This document summarizes the split between relational business data and document
 ```text
 PostgreSQL
 ├── Users
-├── Organizations / Workspaces
-├── Billing-ready usage records
-└── Usage Events
+├── Organizations
+├── Billing
+└── Usage
 
 MongoDB
 ├── Workflow Runs

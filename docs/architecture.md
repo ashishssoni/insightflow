@@ -32,9 +32,9 @@ flowchart LR
 ```text
 PostgreSQL
 ├── Users
-├── Organizations / Workspaces
-├── Billing-ready usage records
-└── Usage Events
+├── Organizations
+├── Billing
+└── Usage
 
 MongoDB
 ├── Workflow Runs
